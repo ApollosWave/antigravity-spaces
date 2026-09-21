@@ -8,7 +8,9 @@
 [![Memory](https://img.shields.io/badge/Memory-%3C8MB-gray)](#)
 [![License](https://img.shields.io/badge/License-MIT-black)](LICENSE)
 
-Antigravity Spaces lives quietly in your macOS menu bar. Designed for developers working across multiple repositories simultaneously, it brings order to your active Antigravity IDE workspaces—giving your floating projects some gravity.
+Working across 15–20 active projects in Antigravity made switching windows a constant papercut. The built-in Command Palette (`Cmd + Shift + P` ➔ *Switch Window*) requires too much typing when you just want to jump somewhere instantly. Right-clicking the Antigravity Dock icon becomes a crowded, unreadable wall of text once you have that many workspaces open, and hunting through Mission Control with dozens of identical dark windows wastes focus.
+
+**Antigravity Spaces** solves this with a lightweight, native macOS floating HUD switcher. Hit **`⌥A`** from anywhere, type two characters, press `Enter` or `⌘1`–`⌘9`, and you're already in your code.
 
 ![Antigravity Spaces Showcase](assets/showcase.jpg)
 
@@ -18,7 +20,23 @@ Antigravity Spaces lives quietly in your macOS menu bar. Designed for developers
 
 Switching between open projects shouldn't interrupt your concentration. Antigravity Spaces automatically identifies every running Antigravity IDE workspace, formats project hierarchies into clean titles, and gives you a Spotlight-style **Floating Gaussian Blur HUD Switcher** summoned globally via **`⌥A` (Option + A)** or the menu bar.
 
-Filter 20+ active workspaces in milliseconds by project name or active file, jump via **`⌘1` through `⌘9`**, or navigate with arrow keys. No windows hidden behind desktops. No hunting through Mission Control. Just your workspaces, organized and immediately available.
+Filter 20+ active workspaces in milliseconds by project name or active file, jump via **`⌘1` through `⌘9`**, or navigate with arrow keys and Tab. No windows hidden behind desktops. No hunting through Mission Control. Just your workspaces, organized and immediately available.
+
+---
+
+## Keyboard Shortcuts & Navigation
+
+| Key / Shortcut | Action |
+| :--- | :--- |
+| **`⌥A`** *(Option + A)* | **Global Summon**: Toggles the floating HUD switcher instantly from any desktop, space, or full-screen app |
+| **`↑` / `↓`** | Navigate up and down through workspaces |
+| **`Tab` / `⇧Tab`** | Cycle forward and backward through the workspace list |
+| **`↵ Enter`** | Switch immediately to the selected workspace and bring window to front |
+| **`⌘1` – `⌘9`** | Instant quick-jump directly to workspace slots 1 through 9 |
+| **Type anything** | Real-time live filtering by project name (e.g. `camp`, `solid`) or active open file (e.g. `chat_channel.rb`) |
+| **`Esc`** | Dismiss the HUD (or click anywhere outside) |
+| **Left Click `A↗`** | Toggle the floating HUD switcher from the macOS menu bar |
+| **Right Click `A↗`** | Open menu bar options: status, quick space list, and *Quit Spaces (`⌘Q`)* |
 
 ---
 
@@ -27,7 +45,7 @@ Filter 20+ active workspaces in milliseconds by project name or active file, jum
 - **Floating Frosted Glass HUD.** Raycast/Spotlight-style floating panel with hardware-accelerated macOS Gaussian blur and vibrancy.
 - **Global Shortcut (`⌥A`).** Summon the switcher instantly from any space, desktop, or full-screen application without lifting your hands from the keyboard.
 - **Real-Time Fuzzy Search.** Type project or file names to filter dozens of open repositories in milliseconds.
-- **Instant Keyboard Navigation.** Switch fluidly with `⌘1` through `⌘9`, or cycle with `↑`/`↓` and press `↵ Enter`.
+- **Instant Keyboard Navigation.** Switch fluidly with `⌘1` through `⌘9`, cycle with `Tab`/`⇧Tab` or `↑`/`↓`, and press `↵ Enter`.
 - **Hybrid Menu Bar.** Keep your menu bar glyph (`A↗`) for quick glances or click to toggle the HUD.
 - **Zero External Dependencies.** Built in 100% native Swift with AppKit and CoreGraphics. Operates with a memory footprint under 12 MB and 0% idle CPU.
 - **Private by Default.** Completely local execution. No telemetry, no network calls, and no analytics.
