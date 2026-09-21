@@ -316,24 +316,30 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
     func setupHUD() {
         let width: CGFloat = 580
         let height: CGFloat = 430
-        let rect = NSRect(x: 0, y: 0, width: width, height: height)
+        let margin: CGFloat = 16.0
         
-        hudPanel = SwitcherHUDPanel(contentRect: rect)
+        // Window is given a transparent margin to prevent macOS WindowServer from drawing an outer square border
+        let panelRect = NSRect(x: 0, y: 0, width: width + margin * 2, height: height + margin * 2)
+        hudPanel = SwitcherHUDPanel(contentRect: panelRect)
         
-        let container = FrostedGlassView(frame: rect)
-        container.autoresizingMask = [.width, .height]
-        hudPanel.contentView = container
+        let rootView = NSView(frame: panelRect)
+        rootView.wantsLayer = true
+        hudPanel.contentView = rootView
         
-        // Search Icon (Electric Blue Magnifying Glass)
-        let iconSize: CGFloat = 17
-        let searchIconView = NSImageView(frame: NSRect(x: 20, y: height - 44, width: iconSize, height: iconSize))
+        let hudRect = NSRect(x: margin, y: margin, width: width, height: height)
+        let container = FrostedGlassView(frame: hudRect)
+        rootView.addSubview(container)
+        
+        // Search Icon (Electric Blue Magnifying Glass, vertically centered with search input)
+        let iconSize: CGFloat = 18
+        let searchIconView = NSImageView(frame: NSRect(x: 20, y: height - 37, width: iconSize, height: iconSize))
         searchIconView.image = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: "Search")
         searchIconView.contentTintColor = NSColor(calibratedRed: 0.30, green: 0.68, blue: 1.0, alpha: 1.0)
         container.addSubview(searchIconView)
         
-        // Search Input Field
-        searchField = SearchField(frame: NSRect(x: 48, y: height - 51, width: width - 118, height: 30))
-        searchField.font = NSFont.systemFont(ofSize: 15.5, weight: .regular)
+        // Search Input Field (horizontally aligned at x=52 to match project titles below, vertically centered)
+        searchField = SearchField(frame: NSRect(x: 52, y: height - 40, width: width - 116, height: 24))
+        searchField.font = NSFont.systemFont(ofSize: 14.5, weight: .regular)
         searchField.textColor = .white
         searchField.backgroundColor = .clear
         searchField.isBordered = false
@@ -342,7 +348,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
             string: "Search workspaces... (Tab / ↑↓ to navigate, ↵ to switch)",
             attributes: [
                 .foregroundColor: NSColor(calibratedWhite: 0.60, alpha: 1.0),
-                .font: NSFont.systemFont(ofSize: 14.5, weight: .regular)
+                .font: NSFont.systemFont(ofSize: 14.0, weight: .regular)
             ]
         )
         searchField.delegate = self
@@ -354,12 +360,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
         }
         container.addSubview(searchField)
         
-        // ESC Badge on top right
+        // ESC Badge on top right (vertically centered with search input)
         let escBadge = NSTextField(labelWithString: "esc")
-        escBadge.font = NSFont.monospacedSystemFont(ofSize: 11.0, weight: .semibold)
+        escBadge.font = NSFont.monospacedSystemFont(ofSize: 10.5, weight: .semibold)
         escBadge.textColor = NSColor(calibratedWhite: 0.85, alpha: 1.0)
         escBadge.alignment = .center
-        escBadge.frame = NSRect(x: width - 52, y: height - 44, width: 34, height: 18)
+        escBadge.frame = NSRect(x: width - 52, y: height - 38, width: 34, height: 20)
         escBadge.wantsLayer = true
         escBadge.layer?.cornerRadius = 5.0
         escBadge.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.08).cgColor
@@ -368,12 +374,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
         container.addSubview(escBadge)
         
         // Header Divider Line
-        let divider = NSBox(frame: NSRect(x: 0, y: height - 60, width: width, height: 1))
+        let divider = NSBox(frame: NSRect(x: 0, y: height - 56, width: width, height: 1))
         divider.boxType = .separator
         container.addSubview(divider)
         
         // Workspaces Table View
-        scrollView = NSScrollView(frame: NSRect(x: 0, y: 34, width: width, height: height - 95))
+        scrollView = NSScrollView(frame: NSRect(x: 0, y: 34, width: width, height: height - 90))
         scrollView.drawsBackground = false
         scrollView.hasVerticalScroller = true
         scrollView.autohidesScrollers = true
