@@ -149,30 +149,53 @@ class WorkspaceCellView: NSTableCellView {
         projectLabel = NSTextField(labelWithString: "")
         projectLabel.font = NSFont.systemFont(ofSize: 14.0, weight: .semibold)
         projectLabel.textColor = .white
-        projectLabel.frame = NSRect(x: 52, y: 23, width: 430, height: 19)
         addSubview(projectLabel)
         
         fileLabel = NSTextField(labelWithString: "")
         fileLabel.font = NSFont.systemFont(ofSize: 11.5, weight: .regular)
         fileLabel.textColor = NSColor(calibratedWhite: 0.70, alpha: 1.0)
-        fileLabel.frame = NSRect(x: 52, y: 6, width: 430, height: 16)
         addSubview(fileLabel)
         
-        // Shortcut / Switch badge on far right
-        badgeContainer = NSView(frame: NSRect(x: 580 - 84, y: 13, width: 70, height: 22))
+        // Shortcut / Switch badge on far right (anchored inside the selection capsule)
+        badgeContainer = NSView(frame: .zero)
         badgeContainer.wantsLayer = true
         badgeContainer.layer?.cornerRadius = 5.0
+        badgeContainer.autoresizingMask = [.minXMargin]
         
         badgeLabel = NSTextField(labelWithString: "")
         badgeLabel.font = NSFont.monospacedSystemFont(ofSize: 11.5, weight: .semibold)
         badgeLabel.alignment = .center
-        badgeLabel.frame = NSRect(x: 0, y: 2, width: 70, height: 18)
         badgeContainer.addSubview(badgeLabel)
         addSubview(badgeContainer)
+        
+        updateLayout()
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func layout() {
+        super.layout()
+        updateLayout()
+    }
+    
+    private func updateLayout() {
+        let badgeW: CGFloat = 70.0
+        let rightMargin: CGFloat = 22.0
+        let currentWidth = bounds.width > 0 ? bounds.width : 580.0
+        let badgeX = currentWidth - badgeW - rightMargin
+        
+        badgeContainer.frame = NSRect(x: badgeX, y: 13, width: badgeW, height: 22)
+        badgeLabel.frame = NSRect(x: 0, y: 2, width: badgeW, height: 18)
+        
+        let textWidth = max(50, badgeX - 52 - 12)
+        if fileLabel.isHidden {
+            projectLabel.frame = NSRect(x: 52, y: 14, width: textWidth, height: 19)
+        } else {
+            projectLabel.frame = NSRect(x: 52, y: 23, width: textWidth, height: 19)
+            fileLabel.frame = NSRect(x: 52, y: 6, width: textWidth, height: 16)
+        }
     }
     
     func configure(with item: WorkspaceItem, slotIndex: Int?, isSelected: Bool) {
@@ -181,12 +204,10 @@ class WorkspaceCellView: NSTableCellView {
         if let file = item.file {
             fileLabel.stringValue = file
             fileLabel.isHidden = false
-            projectLabel.frame = NSRect(x: 52, y: 23, width: 430, height: 19)
-            fileLabel.frame = NSRect(x: 52, y: 6, width: 430, height: 16)
         } else {
             fileLabel.isHidden = true
-            projectLabel.frame = NSRect(x: 52, y: 14, width: 430, height: 19)
         }
+        updateLayout()
         
         if isSelected {
             projectLabel.textColor = .white
@@ -430,6 +451,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
         scrollView.autohidesScrollers = true
         
         tableView = NSTableView(frame: scrollView.bounds)
+        tableView.autoresizingMask = [.width, .height]
         tableView.backgroundColor = .clear
         tableView.headerView = nil
         tableView.rowHeight = 48
@@ -437,6 +459,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
         
         let col = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("WorkspaceCol"))
         col.width = width
+        col.resizingMask = .autoresizingMask
         tableView.addTableColumn(col)
         
         tableView.dataSource = self
