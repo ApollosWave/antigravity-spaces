@@ -9,7 +9,6 @@ struct WorkspaceItem {
     let file: String?
     let pid: pid_t
     let windowRef: AXUIElement
-    var screenIndex: Int = 0
 }
 
 // MARK: - Custom Visual Effect View with Rich Dark Frosted Glass
@@ -131,56 +130,6 @@ class WorkspaceRowView: NSTableRowView {
     }
 }
 
-// MARK: - Monitor Pill Button for Multi-Monitor Navigation
-class MonitorPillButton: NSView {
-    let screenIndex: Int
-    var isCurrentScreen: Bool = false {
-        didSet { updateStyle() }
-    }
-    var onClick: (() -> Void)?
-    private let label = NSTextField(labelWithString: "")
-    
-    init(screenIndex: Int) {
-        self.screenIndex = screenIndex
-        super.init(frame: .zero)
-        wantsLayer = true
-        layer?.cornerRadius = 5.0
-        
-        label.font = NSFont.systemFont(ofSize: 10.0, weight: .semibold)
-        label.alignment = .center
-        label.stringValue = "🖥 \(screenIndex + 1)"
-        addSubview(label)
-        
-        toolTip = "Switch & Move to Display \(screenIndex + 1)"
-        updateStyle()
-    }
-    
-    required init?(coder: NSCoder) { fatalError() }
-    
-    override func layout() {
-        super.layout()
-        label.frame = NSRect(x: 0, y: 2, width: bounds.width, height: bounds.height - 4)
-    }
-    
-    func updateStyle() {
-        if isCurrentScreen {
-            layer?.backgroundColor = NSColor(calibratedRed: 0.16, green: 0.52, blue: 0.98, alpha: 0.28).cgColor
-            layer?.borderWidth = 1.0
-            layer?.borderColor = NSColor(calibratedRed: 0.30, green: 0.68, blue: 1.0, alpha: 0.75).cgColor
-            label.textColor = NSColor(calibratedRed: 0.40, green: 0.88, blue: 1.0, alpha: 1.0)
-        } else {
-            layer?.backgroundColor = NSColor.white.withAlphaComponent(0.06).cgColor
-            layer?.borderWidth = 1.0
-            layer?.borderColor = NSColor.white.withAlphaComponent(0.12).cgColor
-            label.textColor = NSColor(calibratedWhite: 0.65, alpha: 1.0)
-        }
-    }
-    
-    override func mouseDown(with event: NSEvent) {
-        onClick?()
-    }
-}
-
 // MARK: - Workspace Cell View
 class WorkspaceCellView: NSTableCellView {
     var iconView: NSImageView!
@@ -188,8 +137,6 @@ class WorkspaceCellView: NSTableCellView {
     var fileLabel: NSTextField!
     var badgeContainer: NSView!
     var badgeLabel: NSTextField!
-    var monitorButtons: [MonitorPillButton] = []
-    var onSelectMonitor: ((Int) -> Void)?
     
     init(folderIcon: NSImage) {
         super.init(frame: .zero)
@@ -202,13 +149,13 @@ class WorkspaceCellView: NSTableCellView {
         projectLabel = NSTextField(labelWithString: "")
         projectLabel.font = NSFont.systemFont(ofSize: 14.0, weight: .semibold)
         projectLabel.textColor = .white
-        projectLabel.frame = NSRect(x: 52, y: 23, width: 310, height: 19)
+        projectLabel.frame = NSRect(x: 52, y: 23, width: 430, height: 19)
         addSubview(projectLabel)
         
         fileLabel = NSTextField(labelWithString: "")
         fileLabel.font = NSFont.systemFont(ofSize: 11.5, weight: .regular)
         fileLabel.textColor = NSColor(calibratedWhite: 0.70, alpha: 1.0)
-        fileLabel.frame = NSRect(x: 52, y: 6, width: 310, height: 16)
+        fileLabel.frame = NSRect(x: 52, y: 6, width: 430, height: 16)
         addSubview(fileLabel)
         
         // Shortcut / Switch badge on far right
@@ -222,27 +169,6 @@ class WorkspaceCellView: NSTableCellView {
         badgeLabel.frame = NSRect(x: 0, y: 2, width: 70, height: 18)
         badgeContainer.addSubview(badgeLabel)
         addSubview(badgeContainer)
-        
-        // Multi-Monitor buttons (if more than 1 display connected)
-        let screenCount = NSScreen.screens.count
-        if screenCount > 1 {
-            let pillWidth: CGFloat = 38
-            let pillHeight: CGFloat = 22
-            let spacing: CGFloat = 5
-            let totalWidth = CGFloat(screenCount) * pillWidth + CGFloat(screenCount - 1) * spacing
-            let startX = (580 - 92) - totalWidth
-            
-            for i in 0..<screenCount {
-                let btnX = startX + CGFloat(i) * (pillWidth + spacing)
-                let btn = MonitorPillButton(screenIndex: i)
-                btn.frame = NSRect(x: btnX, y: 13, width: pillWidth, height: pillHeight)
-                btn.onClick = { [weak self] in
-                    self?.onSelectMonitor?(i)
-                }
-                addSubview(btn)
-                monitorButtons.append(btn)
-            }
-        }
     }
     
     required init?(coder: NSCoder) {
@@ -252,22 +178,14 @@ class WorkspaceCellView: NSTableCellView {
     func configure(with item: WorkspaceItem, slotIndex: Int?, isSelected: Bool) {
         projectLabel.stringValue = item.project
         
-        let screenCount = NSScreen.screens.count
-        let textWidth: CGFloat = screenCount > 1 ? 310 : 430
-        
         if let file = item.file {
             fileLabel.stringValue = file
             fileLabel.isHidden = false
-            projectLabel.frame = NSRect(x: 52, y: 23, width: textWidth, height: 19)
-            fileLabel.frame = NSRect(x: 52, y: 6, width: textWidth, height: 16)
+            projectLabel.frame = NSRect(x: 52, y: 23, width: 430, height: 19)
+            fileLabel.frame = NSRect(x: 52, y: 6, width: 430, height: 16)
         } else {
             fileLabel.isHidden = true
-            projectLabel.frame = NSRect(x: 52, y: 14, width: textWidth, height: 19)
-        }
-        
-        // Update active screen indicator on monitor buttons
-        for btn in monitorButtons {
-            btn.isCurrentScreen = (btn.screenIndex == item.screenIndex)
+            projectLabel.frame = NSRect(x: 52, y: 14, width: 430, height: 19)
         }
         
         if isSelected {
@@ -677,32 +595,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
                     if AXUIElementCopyAttributeValue(win, kAXTitleAttribute as CFString, &titleRef) == .success,
                        let title = titleRef as? String, !title.isEmpty {
                         let (project, file) = parseWorkspaceTitle(title)
-                        
-                        // Detect screen index for this window
-                        var scrIdx = 0
-                        var posRef: AnyObject?
-                        if AXUIElementCopyAttributeValue(win, kAXPositionAttribute as CFString, &posRef) == .success,
-                           let posVal = posRef, CFGetTypeID(posVal) == AXValueGetTypeID() {
-                            var pt = CGPoint.zero
-                            if AXValueGetValue(posVal as! AXValue, .cgPoint, &pt), let primary = NSScreen.screens.first {
-                                let cocoaY = primary.frame.height - pt.y
-                                let probe = NSPoint(x: pt.x + 40, y: cocoaY - 40)
-                                for (idx, scr) in NSScreen.screens.enumerated() {
-                                    if NSMouseInRect(probe, scr.frame, false) {
-                                        scrIdx = idx
-                                        break
-                                    }
-                                }
-                            }
-                        }
-                        
                         discovered.append(WorkspaceItem(
                             rawTitle: title,
                             project: project,
                             file: file,
                             pid: pid,
-                            windowRef: win,
-                            screenIndex: scrIdx
+                            windowRef: win
                         ))
                     }
                 }
@@ -752,24 +650,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
     }
     
     // MARK: - Activation & Window Focus
-    func activateWorkspace(_ item: WorkspaceItem, onScreenIndex targetScreenIndex: Int? = nil) {
+    func activateWorkspace(_ item: WorkspaceItem) {
         hudPanel.orderOut(nil)
-        
-        if let targetIdx = targetScreenIndex, targetIdx < NSScreen.screens.count {
-            let targetScreen = NSScreen.screens[targetIdx]
-            if let primary = NSScreen.screens.first {
-                let primaryHeight = primary.frame.height
-                let visible = targetScreen.visibleFrame
-                
-                var newPos = CGPoint(
-                    x: visible.origin.x + 40,
-                    y: primaryHeight - (visible.origin.y + visible.height) + 40
-                )
-                if let posVal = AXValueCreate(.cgPoint, &newPos) {
-                    AXUIElementSetAttributeValue(item.windowRef, kAXPositionAttribute as CFString, posVal)
-                }
-            }
-        }
         
         if let app = NSRunningApplication(processIdentifier: item.pid) {
             if #available(macOS 14.0, *) {
@@ -863,9 +745,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
         guard row < filteredWorkspaces.count else { return nil }
         let item = filteredWorkspaces[row]
         let cell = WorkspaceCellView(folderIcon: blueFolderIcon)
-        cell.onSelectMonitor = { [weak self] targetIdx in
-            self?.activateWorkspace(item, onScreenIndex: targetIdx)
-        }
         cell.configure(with: item, slotIndex: row, isSelected: (row == selectedIndex))
         return cell
     }
