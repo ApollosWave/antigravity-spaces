@@ -9,6 +9,7 @@ struct WorkspaceItem {
     let file: String?
     let pid: pid_t
     let windowRef: AXUIElement
+    var screenIndex: Int = 0
 }
 
 // MARK: - Custom Visual Effect View with Rich Dark Frosted Glass
@@ -52,7 +53,7 @@ class SearchField: NSTextField {
     var onCommandNumber: ((Int) -> Void)?
     
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        if event.modifierFlags.contains(.command) {
+        if event.modifierFlags.contains(.command) && !event.modifierFlags.contains(.shift) && !event.modifierFlags.contains(.control) {
             let numMap: [UInt16: Int] = [
                 18: 0, 19: 1, 20: 2, 21: 3, 23: 4, 22: 5, 26: 6, 28: 7, 25: 8
             ]
@@ -67,6 +68,8 @@ class SearchField: NSTextField {
 
 // MARK: - Floating Switcher HUD Panel
 class SwitcherHUDPanel: NSPanel {
+    var onCommandNumber: ((Int) -> Void)?
+    
     init(contentRect: NSRect) {
         super.init(
             contentRect: contentRect,
@@ -89,6 +92,19 @@ class SwitcherHUDPanel: NSPanel {
     override func resignKey() {
         super.resignKey()
         self.orderOut(nil)
+    }
+    
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if event.modifierFlags.contains(.command) && !event.modifierFlags.contains(.shift) && !event.modifierFlags.contains(.control) {
+            let numMap: [UInt16: Int] = [
+                18: 0, 19: 1, 20: 2, 21: 3, 23: 4, 22: 5, 26: 6, 28: 7, 25: 8
+            ]
+            if let slot = numMap[event.keyCode] {
+                onCommandNumber?(slot)
+                return true
+            }
+        }
+        return super.performKeyEquivalent(with: event)
     }
 }
 
@@ -115,6 +131,56 @@ class WorkspaceRowView: NSTableRowView {
     }
 }
 
+// MARK: - Monitor Pill Button for Multi-Monitor Navigation
+class MonitorPillButton: NSView {
+    let screenIndex: Int
+    var isCurrentScreen: Bool = false {
+        didSet { updateStyle() }
+    }
+    var onClick: (() -> Void)?
+    private let label = NSTextField(labelWithString: "")
+    
+    init(screenIndex: Int) {
+        self.screenIndex = screenIndex
+        super.init(frame: .zero)
+        wantsLayer = true
+        layer?.cornerRadius = 5.0
+        
+        label.font = NSFont.systemFont(ofSize: 10.0, weight: .semibold)
+        label.alignment = .center
+        label.stringValue = "🖥 \(screenIndex + 1)"
+        addSubview(label)
+        
+        toolTip = "Switch & Move to Display \(screenIndex + 1)"
+        updateStyle()
+    }
+    
+    required init?(coder: NSCoder) { fatalError() }
+    
+    override func layout() {
+        super.layout()
+        label.frame = NSRect(x: 0, y: 2, width: bounds.width, height: bounds.height - 4)
+    }
+    
+    func updateStyle() {
+        if isCurrentScreen {
+            layer?.backgroundColor = NSColor(calibratedRed: 0.16, green: 0.52, blue: 0.98, alpha: 0.28).cgColor
+            layer?.borderWidth = 1.0
+            layer?.borderColor = NSColor(calibratedRed: 0.30, green: 0.68, blue: 1.0, alpha: 0.75).cgColor
+            label.textColor = NSColor(calibratedRed: 0.40, green: 0.88, blue: 1.0, alpha: 1.0)
+        } else {
+            layer?.backgroundColor = NSColor.white.withAlphaComponent(0.06).cgColor
+            layer?.borderWidth = 1.0
+            layer?.borderColor = NSColor.white.withAlphaComponent(0.12).cgColor
+            label.textColor = NSColor(calibratedWhite: 0.65, alpha: 1.0)
+        }
+    }
+    
+    override func mouseDown(with event: NSEvent) {
+        onClick?()
+    }
+}
+
 // MARK: - Workspace Cell View
 class WorkspaceCellView: NSTableCellView {
     var iconView: NSImageView!
@@ -122,6 +188,8 @@ class WorkspaceCellView: NSTableCellView {
     var fileLabel: NSTextField!
     var badgeContainer: NSView!
     var badgeLabel: NSTextField!
+    var monitorButtons: [MonitorPillButton] = []
+    var onSelectMonitor: ((Int) -> Void)?
     
     init(folderIcon: NSImage) {
         super.init(frame: .zero)
@@ -134,25 +202,47 @@ class WorkspaceCellView: NSTableCellView {
         projectLabel = NSTextField(labelWithString: "")
         projectLabel.font = NSFont.systemFont(ofSize: 14.0, weight: .semibold)
         projectLabel.textColor = .white
-        projectLabel.frame = NSRect(x: 52, y: 23, width: 400, height: 19)
+        projectLabel.frame = NSRect(x: 52, y: 23, width: 310, height: 19)
         addSubview(projectLabel)
         
         fileLabel = NSTextField(labelWithString: "")
         fileLabel.font = NSFont.systemFont(ofSize: 11.5, weight: .regular)
         fileLabel.textColor = NSColor(calibratedWhite: 0.70, alpha: 1.0)
-        fileLabel.frame = NSRect(x: 52, y: 6, width: 400, height: 16)
+        fileLabel.frame = NSRect(x: 52, y: 6, width: 310, height: 16)
         addSubview(fileLabel)
         
-        badgeContainer = NSView(frame: NSRect(x: 485, y: 13, width: 68, height: 22))
+        // Shortcut / Switch badge on far right
+        badgeContainer = NSView(frame: NSRect(x: 580 - 84, y: 13, width: 70, height: 22))
         badgeContainer.wantsLayer = true
         badgeContainer.layer?.cornerRadius = 5.0
         
         badgeLabel = NSTextField(labelWithString: "")
         badgeLabel.font = NSFont.monospacedSystemFont(ofSize: 11.5, weight: .semibold)
         badgeLabel.alignment = .center
-        badgeLabel.frame = NSRect(x: 0, y: 2, width: 68, height: 18)
+        badgeLabel.frame = NSRect(x: 0, y: 2, width: 70, height: 18)
         badgeContainer.addSubview(badgeLabel)
         addSubview(badgeContainer)
+        
+        // Multi-Monitor buttons (if more than 1 display connected)
+        let screenCount = NSScreen.screens.count
+        if screenCount > 1 {
+            let pillWidth: CGFloat = 38
+            let pillHeight: CGFloat = 22
+            let spacing: CGFloat = 5
+            let totalWidth = CGFloat(screenCount) * pillWidth + CGFloat(screenCount - 1) * spacing
+            let startX = (580 - 92) - totalWidth
+            
+            for i in 0..<screenCount {
+                let btnX = startX + CGFloat(i) * (pillWidth + spacing)
+                let btn = MonitorPillButton(screenIndex: i)
+                btn.frame = NSRect(x: btnX, y: 13, width: pillWidth, height: pillHeight)
+                btn.onClick = { [weak self] in
+                    self?.onSelectMonitor?(i)
+                }
+                addSubview(btn)
+                monitorButtons.append(btn)
+            }
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -161,13 +251,23 @@ class WorkspaceCellView: NSTableCellView {
     
     func configure(with item: WorkspaceItem, slotIndex: Int?, isSelected: Bool) {
         projectLabel.stringValue = item.project
+        
+        let screenCount = NSScreen.screens.count
+        let textWidth: CGFloat = screenCount > 1 ? 310 : 430
+        
         if let file = item.file {
             fileLabel.stringValue = file
             fileLabel.isHidden = false
-            projectLabel.frame = NSRect(x: 52, y: 23, width: 420, height: 19)
+            projectLabel.frame = NSRect(x: 52, y: 23, width: textWidth, height: 19)
+            fileLabel.frame = NSRect(x: 52, y: 6, width: textWidth, height: 16)
         } else {
             fileLabel.isHidden = true
-            projectLabel.frame = NSRect(x: 52, y: 14, width: 420, height: 19)
+            projectLabel.frame = NSRect(x: 52, y: 14, width: textWidth, height: 19)
+        }
+        
+        // Update active screen indicator on monitor buttons
+        for btn in monitorButtons {
+            btn.isCurrentScreen = (btn.screenIndex == item.screenIndex)
         }
         
         if isSelected {
@@ -178,7 +278,11 @@ class WorkspaceCellView: NSTableCellView {
             badgeContainer.layer?.backgroundColor = NSColor(calibratedRed: 0.16, green: 0.52, blue: 0.98, alpha: 0.35).cgColor
             badgeContainer.layer?.borderWidth = 1.0
             badgeContainer.layer?.borderColor = NSColor(calibratedRed: 0.30, green: 0.68, blue: 1.0, alpha: 0.80).cgColor
-            badgeLabel.stringValue = "↵ Switch"
+            if let slot = slotIndex, slot < 9 {
+                badgeLabel.stringValue = "⌘\(slot + 1)  ↵"
+            } else {
+                badgeLabel.stringValue = "↵ Switch"
+            }
             badgeLabel.textColor = NSColor(calibratedRed: 0.40, green: 0.88, blue: 1.0, alpha: 1.0)
         } else {
             projectLabel.textColor = NSColor(calibratedWhite: 0.92, alpha: 1.0)
@@ -219,9 +323,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
     // HotKey event tap
     var eventTap: CFMachPort?
     
+    // Display Preference (-1 = Follow Mouse Cursor / Auto, >= 0 = Specific Display Index)
+    var targetDisplayIndex: Int = -1
+    
     func applicationDidFinishLaunching(_ notification: Notification) {
         checkAccessibility(prompt: true)
         blueFolderIcon = createBlueFolderIcon()
+        
+        if let saved = UserDefaults.standard.value(forKey: "antigravity_spaces_display_pref") as? Int {
+            targetDisplayIndex = saved
+        }
         
         setupStatusItem()
         setupHUD()
@@ -317,10 +428,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
         let width: CGFloat = 580
         let height: CGFloat = 430
         let margin: CGFloat = 16.0
+        let headerHeight: CGFloat = 56.0
         
         // Window is given a transparent margin to prevent macOS WindowServer from drawing an outer square border
         let panelRect = NSRect(x: 0, y: 0, width: width + margin * 2, height: height + margin * 2)
         hudPanel = SwitcherHUDPanel(contentRect: panelRect)
+        hudPanel.onCommandNumber = { [weak self] slot in
+            guard let self = self else { return }
+            if slot < self.filteredWorkspaces.count {
+                self.activateWorkspace(self.filteredWorkspaces[slot])
+            }
+        }
         
         let rootView = NSView(frame: panelRect)
         rootView.wantsLayer = true
@@ -330,15 +448,26 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
         let container = FrostedGlassView(frame: hudRect)
         rootView.addSubview(container)
         
-        // Search Icon (Electric Blue Magnifying Glass, vertically centered with search input)
-        let iconSize: CGFloat = 18
-        let searchIconView = NSImageView(frame: NSRect(x: 20, y: height - 37, width: iconSize, height: iconSize))
+        // Dedicated Header View with precise vertical alignment
+        let headerView = NSView(frame: NSRect(x: 0, y: height - headerHeight, width: width, height: headerHeight))
+        container.addSubview(headerView)
+        
+        // Header Divider Line (at bottom of headerView, y = 0)
+        let divider = NSBox(frame: NSRect(x: 0, y: 0, width: width, height: 1))
+        divider.boxType = .separator
+        headerView.addSubview(divider)
+        
+        // Centerline of the 56pt header is at y = 28.0
+        // Search Icon: size 18x18. Center is 28.0 => y = 19.0
+        let iconSize: CGFloat = 18.0
+        let searchIconView = NSImageView(frame: NSRect(x: 20, y: 19.0, width: iconSize, height: iconSize))
         searchIconView.image = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: "Search")
         searchIconView.contentTintColor = NSColor(calibratedRed: 0.30, green: 0.68, blue: 1.0, alpha: 1.0)
-        container.addSubview(searchIconView)
+        searchIconView.imageScaling = .scaleProportionallyUpOrDown
+        headerView.addSubview(searchIconView)
         
-        // Search Input Field (horizontally aligned at x=52 to match project titles below, vertically centered)
-        searchField = SearchField(frame: NSRect(x: 52, y: height - 40, width: width - 116, height: 24))
+        // Search Input Field: height 26. Center is 28.0 => y = 15.0
+        searchField = SearchField(frame: NSRect(x: 52, y: 15.0, width: width - 116, height: 26.0))
         searchField.font = NSFont.systemFont(ofSize: 14.5, weight: .regular)
         searchField.textColor = .white
         searchField.backgroundColor = .clear
@@ -358,25 +487,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
                 self.activateWorkspace(self.filteredWorkspaces[slot])
             }
         }
-        container.addSubview(searchField)
+        headerView.addSubview(searchField)
         
-        // ESC Badge on top right (vertically centered with search input)
-        let escBadge = NSTextField(labelWithString: "esc")
-        escBadge.font = NSFont.monospacedSystemFont(ofSize: 10.5, weight: .semibold)
-        escBadge.textColor = NSColor(calibratedWhite: 0.85, alpha: 1.0)
-        escBadge.alignment = .center
-        escBadge.frame = NSRect(x: width - 52, y: height - 38, width: 34, height: 20)
+        // ESC Badge: width 34, height 20. Center is 28.0 => y = 18.0 (18pt from top, 18pt from bottom divider)
+        let escBadge = NSView(frame: NSRect(x: width - 52, y: 18.0, width: 34, height: 20))
         escBadge.wantsLayer = true
         escBadge.layer?.cornerRadius = 5.0
         escBadge.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.08).cgColor
         escBadge.layer?.borderWidth = 1.0
         escBadge.layer?.borderColor = NSColor.white.withAlphaComponent(0.20).cgColor
-        container.addSubview(escBadge)
         
-        // Header Divider Line
-        let divider = NSBox(frame: NSRect(x: 0, y: height - 56, width: width, height: 1))
-        divider.boxType = .separator
-        container.addSubview(divider)
+        let escLabel = NSTextField(labelWithString: "esc")
+        escLabel.font = NSFont.monospacedSystemFont(ofSize: 10.5, weight: .semibold)
+        escLabel.textColor = NSColor(calibratedWhite: 0.85, alpha: 1.0)
+        escLabel.alignment = .center
+        escLabel.frame = NSRect(x: 0, y: 2, width: 34, height: 16)
+        escBadge.addSubview(escLabel)
+        headerView.addSubview(escBadge)
         
         // Workspaces Table View
         scrollView = NSScrollView(frame: NSRect(x: 0, y: 34, width: width, height: height - 90))
@@ -491,9 +618,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
         filteredWorkspaces = allWorkspaces
         selectedIndex = 0
         tableView.reloadData()
+        if !filteredWorkspaces.isEmpty {
+            tableView.scrollRowToVisible(0)
+        }
         
-        // Center on the active screen
-        let screen = NSScreen.main ?? NSScreen.screens.first!
+        // Determine which screen to display on (User preference or mouse cursor location)
+        let screen: NSScreen
+        if targetDisplayIndex >= 0 && targetDisplayIndex < NSScreen.screens.count {
+            screen = NSScreen.screens[targetDisplayIndex]
+        } else {
+            let mouseLoc = NSEvent.mouseLocation
+            screen = NSScreen.screens.first { NSMouseInRect(mouseLoc, $0.frame, false) }
+                ?? NSScreen.main
+                ?? NSScreen.screens.first!
+        }
+        
         let screenRect = screen.visibleFrame
         let hudRect = hudPanel.frame
         let newOrigin = NSPoint(
@@ -538,12 +677,32 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
                     if AXUIElementCopyAttributeValue(win, kAXTitleAttribute as CFString, &titleRef) == .success,
                        let title = titleRef as? String, !title.isEmpty {
                         let (project, file) = parseWorkspaceTitle(title)
+                        
+                        // Detect screen index for this window
+                        var scrIdx = 0
+                        var posRef: AnyObject?
+                        if AXUIElementCopyAttributeValue(win, kAXPositionAttribute as CFString, &posRef) == .success,
+                           let posVal = posRef, CFGetTypeID(posVal) == AXValueGetTypeID() {
+                            var pt = CGPoint.zero
+                            if AXValueGetValue(posVal as! AXValue, .cgPoint, &pt), let primary = NSScreen.screens.first {
+                                let cocoaY = primary.frame.height - pt.y
+                                let probe = NSPoint(x: pt.x + 40, y: cocoaY - 40)
+                                for (idx, scr) in NSScreen.screens.enumerated() {
+                                    if NSMouseInRect(probe, scr.frame, false) {
+                                        scrIdx = idx
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                        
                         discovered.append(WorkspaceItem(
                             rawTitle: title,
                             project: project,
                             file: file,
                             pid: pid,
-                            windowRef: win
+                            windowRef: win,
+                            screenIndex: scrIdx
                         ))
                     }
                 }
@@ -593,8 +752,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
     }
     
     // MARK: - Activation & Window Focus
-    func activateWorkspace(_ item: WorkspaceItem) {
+    func activateWorkspace(_ item: WorkspaceItem, onScreenIndex targetScreenIndex: Int? = nil) {
         hudPanel.orderOut(nil)
+        
+        if let targetIdx = targetScreenIndex, targetIdx < NSScreen.screens.count {
+            let targetScreen = NSScreen.screens[targetIdx]
+            if let primary = NSScreen.screens.first {
+                let primaryHeight = primary.frame.height
+                let visible = targetScreen.visibleFrame
+                
+                var newPos = CGPoint(
+                    x: visible.origin.x + 40,
+                    y: primaryHeight - (visible.origin.y + visible.height) + 40
+                )
+                if let posVal = AXValueCreate(.cgPoint, &newPos) {
+                    AXUIElementSetAttributeValue(item.windowRef, kAXPositionAttribute as CFString, posVal)
+                }
+            }
+        }
         
         if let app = NSRunningApplication(processIdentifier: item.pid) {
             if #available(macOS 14.0, *) {
@@ -688,6 +863,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
         guard row < filteredWorkspaces.count else { return nil }
         let item = filteredWorkspaces[row]
         let cell = WorkspaceCellView(folderIcon: blueFolderIcon)
+        cell.onSelectMonitor = { [weak self] targetIdx in
+            self?.activateWorkspace(item, onScreenIndex: targetIdx)
+        }
         cell.configure(with: item, slotIndex: row, isSelected: (row == selectedIndex))
         return cell
     }
@@ -711,6 +889,34 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
         hudItem.keyEquivalentModifierMask = [.option]
         hudItem.target = self
         menu.addItem(hudItem)
+        menu.addItem(NSMenuItem.separator())
+        
+        // HUD Display Selection Submenu
+        let displayMenu = NSMenu()
+        let autoItem = NSMenuItem(title: "Follow Mouse Cursor (Auto)", action: #selector(setDisplayPreference(_:)), keyEquivalent: "")
+        autoItem.tag = -1
+        autoItem.target = self
+        if targetDisplayIndex == -1 {
+            autoItem.state = .on
+        }
+        displayMenu.addItem(autoItem)
+        displayMenu.addItem(NSMenuItem.separator())
+        
+        for (idx, screen) in NSScreen.screens.enumerated() {
+            let res = "\(Int(screen.frame.width)) × \(Int(screen.frame.height))"
+            let title = "Display \(idx + 1): \(screen.localizedName) (\(res))"
+            let item = NSMenuItem(title: title, action: #selector(setDisplayPreference(_:)), keyEquivalent: "")
+            item.tag = idx
+            item.target = self
+            if targetDisplayIndex == idx {
+                item.state = .on
+            }
+            displayMenu.addItem(item)
+        }
+        
+        let displayParent = NSMenuItem(title: "HUD Display", action: nil, keyEquivalent: "")
+        displayParent.submenu = displayMenu
+        menu.addItem(displayParent)
         menu.addItem(NSMenuItem.separator())
         
         let header = NSMenuItem(title: "Active Antigravity Spaces", action: nil, keyEquivalent: "")
@@ -750,6 +956,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
         
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit Spaces", action: #selector(quitApp), keyEquivalent: "q"))
+    }
+    
+    @objc func setDisplayPreference(_ sender: NSMenuItem) {
+        targetDisplayIndex = sender.tag
+        UserDefaults.standard.set(targetDisplayIndex, forKey: "antigravity_spaces_display_pref")
     }
     
     @objc func openHUDFromMenu() {
