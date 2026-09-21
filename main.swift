@@ -22,8 +22,6 @@ class FrostedGlassView: NSVisualEffectView {
         self.wantsLayer = true
         self.layer?.cornerRadius = 16.0
         self.layer?.masksToBounds = true
-        self.layer?.borderWidth = 1.0
-        self.layer?.borderColor = NSColor.white.withAlphaComponent(0.18).cgColor
     }
     
     required init?(coder: NSCoder) {
@@ -31,10 +29,21 @@ class FrostedGlassView: NSVisualEffectView {
     }
     
     override func draw(_ dirtyRect: NSRect) {
+        // Clip all background drawing to the 16px rounded path (eliminates square corner artifacts)
+        let clipPath = NSBezierPath(roundedRect: bounds, xRadius: 16.0, yRadius: 16.0)
+        clipPath.addClip()
+        
         super.draw(dirtyRect)
-        // Rich, high-contrast dark graphite wash over the Gaussian blur (Raycast/Spotlight dark glass)
+        
+        // Rich, high-contrast dark graphite wash over the Gaussian blur
         NSColor(calibratedRed: 0.11, green: 0.12, blue: 0.15, alpha: 0.88).setFill()
-        dirtyRect.fill(using: .sourceOver)
+        clipPath.fill()
+        
+        // Crisp 1px border drawn directly on the rounded curve
+        let strokePath = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 15.5, yRadius: 15.5)
+        strokePath.lineWidth = 1.0
+        NSColor.white.withAlphaComponent(0.18).setStroke()
+        strokePath.stroke()
     }
 }
 
@@ -61,7 +70,7 @@ class SwitcherHUDPanel: NSPanel {
     init(contentRect: NSRect) {
         super.init(
             contentRect: contentRect,
-            styleMask: [.nonactivatingPanel, .borderless, .fullSizeContentView],
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
@@ -390,6 +399,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
         // Footer Bar
         let footerBox = NSView(frame: NSRect(x: 0, y: 0, width: width, height: 34))
         footerBox.wantsLayer = true
+        footerBox.layer?.cornerRadius = 16.0
+        footerBox.layer?.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+        footerBox.layer?.masksToBounds = true
         footerBox.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.28).cgColor
         
         let footerDivider = NSBox(frame: NSRect(x: 0, y: 33, width: width, height: 1))
@@ -486,6 +498,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
         
         NSApp.activate(ignoringOtherApps: true)
         hudPanel.makeKeyAndOrderFront(nil)
+        hudPanel.invalidateShadow()
         hudPanel.makeFirstResponder(searchField)
     }
     
