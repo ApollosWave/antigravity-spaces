@@ -11,18 +11,19 @@ struct WorkspaceItem {
     let windowRef: AXUIElement
 }
 
-// MARK: - Custom Visual Effect View with Gaussian Frosted Glass
+// MARK: - Custom Visual Effect View with Rich Dark Frosted Glass
 class FrostedGlassView: NSVisualEffectView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
-        self.material = .hudWindow
+        self.material = .underWindowBackground
         self.blendingMode = .behindWindow
         self.state = .active
+        self.appearance = NSAppearance(named: .vibrantDark)
         self.wantsLayer = true
         self.layer?.cornerRadius = 16.0
         self.layer?.masksToBounds = true
         self.layer?.borderWidth = 1.0
-        self.layer?.borderColor = NSColor.white.withAlphaComponent(0.12).cgColor
+        self.layer?.borderColor = NSColor.white.withAlphaComponent(0.18).cgColor
     }
     
     required init?(coder: NSCoder) {
@@ -31,31 +32,27 @@ class FrostedGlassView: NSVisualEffectView {
     
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
-        // Subtle dark tint over Gaussian blur for rich contrast
-        NSColor(calibratedWhite: 0.10, alpha: 0.45).setFill()
+        // Rich, high-contrast dark graphite wash over the Gaussian blur (Raycast/Spotlight dark glass)
+        NSColor(calibratedRed: 0.11, green: 0.12, blue: 0.15, alpha: 0.88).setFill()
         dirtyRect.fill(using: .sourceOver)
     }
 }
 
-// MARK: - Search Text Field with Key Delegation
-protocol SearchFieldDelegate: AnyObject {
-    func searchFieldDidPressKey(event: NSEvent) -> Bool
-    func searchFieldTextDidChange(text: String)
-}
-
+// MARK: - Custom Search Field with Command Equivalent Interception
 class SearchField: NSTextField {
-    weak var keyDelegate: SearchFieldDelegate?
+    var onCommandNumber: ((Int) -> Void)?
     
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        if let handled = keyDelegate?.searchFieldDidPressKey(event: event), handled {
-            return true
+        if event.modifierFlags.contains(.command) {
+            let numMap: [UInt16: Int] = [
+                18: 0, 19: 1, 20: 2, 21: 3, 23: 4, 22: 5, 26: 6, 28: 7, 25: 8
+            ]
+            if let slot = numMap[event.keyCode] {
+                onCommandNumber?(slot)
+                return true
+            }
         }
         return super.performKeyEquivalent(with: event)
-    }
-    
-    override func textDidChange(_ notification: Notification) {
-        super.textDidChange(notification)
-        keyDelegate?.searchFieldTextDidChange(text: stringValue)
     }
 }
 
@@ -73,6 +70,7 @@ class SwitcherHUDPanel: NSPanel {
         self.hasShadow = true
         self.level = .floating
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        self.appearance = NSAppearance(named: .vibrantDark)
         self.isMovableByWindowBackground = true
     }
     
@@ -81,36 +79,30 @@ class SwitcherHUDPanel: NSPanel {
     
     override func resignKey() {
         super.resignKey()
-        // Auto-dismiss when losing focus
         self.orderOut(nil)
-    }
-    
-    override func keyDown(with event: NSEvent) {
-        if event.keyCode == 53 { // ESC
-            self.orderOut(nil)
-            return
-        }
-        super.keyDown(with: event)
     }
 }
 
-// MARK: - Workspace Row View
+// MARK: - Workspace Row View with Prominent Selection Capsule
 class WorkspaceRowView: NSTableRowView {
     var isCurrentSelection: Bool = false {
         didSet { needsDisplay = true }
     }
     
-    override func drawSelection(in dirtyRect: NSRect) {
-        // Custom sleek rounded selection highlight
-        let selectionRect = NSRect(x: 8.0, y: 3.0, width: bounds.width - 16.0, height: bounds.height - 6.0)
-        let path = NSBezierPath(roundedRect: selectionRect, xRadius: 8.0, yRadius: 8.0)
-        NSColor(calibratedRed: 0.16, green: 0.65, blue: 0.98, alpha: 0.28).setFill()
-        path.fill()
-        
-        let borderPath = NSBezierPath(roundedRect: selectionRect, xRadius: 8.0, yRadius: 8.0)
-        borderPath.lineWidth = 1.0
-        NSColor(calibratedRed: 0.16, green: 0.65, blue: 0.98, alpha: 0.50).setStroke()
-        borderPath.stroke()
+    override func drawBackground(in dirtyRect: NSRect) {
+        super.drawBackground(in: dirtyRect)
+        if isCurrentSelection {
+            let selectionRect = NSRect(x: 10.0, y: 3.0, width: bounds.width - 20.0, height: bounds.height - 6.0)
+            let path = NSBezierPath(roundedRect: selectionRect, xRadius: 8.0, yRadius: 8.0)
+            // Vibrant electric-blue selection capsule
+            NSColor(calibratedRed: 0.16, green: 0.52, blue: 0.98, alpha: 0.28).setFill()
+            path.fill()
+            
+            let borderPath = NSBezierPath(roundedRect: selectionRect, xRadius: 8.0, yRadius: 8.0)
+            borderPath.lineWidth = 1.2
+            NSColor(calibratedRed: 0.30, green: 0.68, blue: 1.0, alpha: 0.75).setStroke()
+            borderPath.stroke()
+        }
     }
 }
 
@@ -119,34 +111,39 @@ class WorkspaceCellView: NSTableCellView {
     var iconView: NSImageView!
     var projectLabel: NSTextField!
     var fileLabel: NSTextField!
-    var shortcutBadge: NSTextField!
+    var badgeContainer: NSView!
+    var badgeLabel: NSTextField!
     
     init(folderIcon: NSImage) {
         super.init(frame: .zero)
         
-        iconView = NSImageView(frame: NSRect(x: 18, y: 12, width: 22, height: 22))
+        iconView = NSImageView(frame: NSRect(x: 20, y: 13, width: 22, height: 22))
         iconView.image = folderIcon
         iconView.imageScaling = .scaleProportionallyUpOrDown
         addSubview(iconView)
         
         projectLabel = NSTextField(labelWithString: "")
-        projectLabel.font = NSFont.systemFont(ofSize: 13.5, weight: .semibold)
+        projectLabel.font = NSFont.systemFont(ofSize: 14.0, weight: .semibold)
         projectLabel.textColor = .white
-        projectLabel.frame = NSRect(x: 48, y: 22, width: 380, height: 18)
+        projectLabel.frame = NSRect(x: 52, y: 23, width: 400, height: 19)
         addSubview(projectLabel)
         
         fileLabel = NSTextField(labelWithString: "")
-        fileLabel.font = NSFont.systemFont(ofSize: 11.0, weight: .regular)
-        fileLabel.textColor = NSColor(calibratedWhite: 0.65, alpha: 1.0)
-        fileLabel.frame = NSRect(x: 48, y: 6, width: 380, height: 16)
+        fileLabel.font = NSFont.systemFont(ofSize: 11.5, weight: .regular)
+        fileLabel.textColor = NSColor(calibratedWhite: 0.70, alpha: 1.0)
+        fileLabel.frame = NSRect(x: 52, y: 6, width: 400, height: 16)
         addSubview(fileLabel)
         
-        shortcutBadge = NSTextField(labelWithString: "")
-        shortcutBadge.font = NSFont.monospacedSystemFont(ofSize: 11.5, weight: .medium)
-        shortcutBadge.textColor = NSColor(calibratedWhite: 0.60, alpha: 1.0)
-        shortcutBadge.alignment = .right
-        shortcutBadge.frame = NSRect(x: 480, y: 14, width: 65, height: 18)
-        addSubview(shortcutBadge)
+        badgeContainer = NSView(frame: NSRect(x: 485, y: 13, width: 68, height: 22))
+        badgeContainer.wantsLayer = true
+        badgeContainer.layer?.cornerRadius = 5.0
+        
+        badgeLabel = NSTextField(labelWithString: "")
+        badgeLabel.font = NSFont.monospacedSystemFont(ofSize: 11.5, weight: .semibold)
+        badgeLabel.alignment = .center
+        badgeLabel.frame = NSRect(x: 0, y: 2, width: 68, height: 18)
+        badgeContainer.addSubview(badgeLabel)
+        addSubview(badgeContainer)
     }
     
     required init?(coder: NSCoder) {
@@ -158,26 +155,42 @@ class WorkspaceCellView: NSTableCellView {
         if let file = item.file {
             fileLabel.stringValue = file
             fileLabel.isHidden = false
-            projectLabel.frame = NSRect(x: 48, y: 23, width: 420, height: 18)
+            projectLabel.frame = NSRect(x: 52, y: 23, width: 420, height: 19)
         } else {
             fileLabel.isHidden = true
-            projectLabel.frame = NSRect(x: 48, y: 14, width: 420, height: 18)
+            projectLabel.frame = NSRect(x: 52, y: 14, width: 420, height: 19)
         }
         
         if isSelected {
-            shortcutBadge.stringValue = "↵"
-            shortcutBadge.textColor = NSColor(calibratedRed: 0.40, green: 0.85, blue: 1.0, alpha: 1.0)
-        } else if let slot = slotIndex, slot < 9 {
-            shortcutBadge.stringValue = "⌘ \(slot + 1)"
-            shortcutBadge.textColor = NSColor(calibratedWhite: 0.55, alpha: 1.0)
+            projectLabel.textColor = .white
+            fileLabel.textColor = NSColor(calibratedRed: 0.60, green: 0.85, blue: 1.0, alpha: 1.0)
+            
+            badgeContainer.isHidden = false
+            badgeContainer.layer?.backgroundColor = NSColor(calibratedRed: 0.16, green: 0.52, blue: 0.98, alpha: 0.35).cgColor
+            badgeContainer.layer?.borderWidth = 1.0
+            badgeContainer.layer?.borderColor = NSColor(calibratedRed: 0.30, green: 0.68, blue: 1.0, alpha: 0.80).cgColor
+            badgeLabel.stringValue = "↵ Switch"
+            badgeLabel.textColor = NSColor(calibratedRed: 0.40, green: 0.88, blue: 1.0, alpha: 1.0)
         } else {
-            shortcutBadge.stringValue = ""
+            projectLabel.textColor = NSColor(calibratedWhite: 0.92, alpha: 1.0)
+            fileLabel.textColor = NSColor(calibratedWhite: 0.65, alpha: 1.0)
+            
+            if let slot = slotIndex, slot < 9 {
+                badgeContainer.isHidden = false
+                badgeContainer.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.06).cgColor
+                badgeContainer.layer?.borderWidth = 1.0
+                badgeContainer.layer?.borderColor = NSColor.white.withAlphaComponent(0.12).cgColor
+                badgeLabel.stringValue = "⌘ \(slot + 1)"
+                badgeLabel.textColor = NSColor(calibratedWhite: 0.70, alpha: 1.0)
+            } else {
+                badgeContainer.isHidden = true
+            }
         }
     }
 }
 
 // MARK: - Main Application Delegate & Controller
-class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewDataSource, NSTableViewDelegate, SearchFieldDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDelegate {
     var statusItem: NSStatusItem!
     let menu = NSMenu()
     var blueFolderIcon: NSImage!
@@ -302,49 +315,56 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
         container.autoresizingMask = [.width, .height]
         hudPanel.contentView = container
         
-        // Search Icon
-        let iconSize: CGFloat = 16
+        // Search Icon (Electric Blue Magnifying Glass)
+        let iconSize: CGFloat = 17
         let searchIconView = NSImageView(frame: NSRect(x: 20, y: height - 44, width: iconSize, height: iconSize))
         searchIconView.image = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: "Search")
-        searchIconView.contentTintColor = NSColor(calibratedWhite: 0.65, alpha: 1.0)
+        searchIconView.contentTintColor = NSColor(calibratedRed: 0.30, green: 0.68, blue: 1.0, alpha: 1.0)
         container.addSubview(searchIconView)
         
         // Search Input Field
-        searchField = SearchField(frame: NSRect(x: 46, y: height - 50, width: width - 110, height: 28))
-        searchField.font = NSFont.systemFont(ofSize: 15.0, weight: .regular)
+        searchField = SearchField(frame: NSRect(x: 48, y: height - 51, width: width - 118, height: 30))
+        searchField.font = NSFont.systemFont(ofSize: 15.5, weight: .regular)
         searchField.textColor = .white
         searchField.backgroundColor = .clear
         searchField.isBordered = false
         searchField.focusRingType = .none
         searchField.placeholderAttributedString = NSAttributedString(
-            string: "Search workspaces... (↑/↓ to navigate, ↵ to switch)",
+            string: "Search workspaces... (Tab / ↑↓ to navigate, ↵ to switch)",
             attributes: [
-                .foregroundColor: NSColor(calibratedWhite: 0.50, alpha: 1.0),
-                .font: NSFont.systemFont(ofSize: 14.0, weight: .regular)
+                .foregroundColor: NSColor(calibratedWhite: 0.60, alpha: 1.0),
+                .font: NSFont.systemFont(ofSize: 14.5, weight: .regular)
             ]
         )
-        searchField.keyDelegate = self
+        searchField.delegate = self
+        searchField.onCommandNumber = { [weak self] slot in
+            guard let self = self else { return }
+            if slot < self.filteredWorkspaces.count {
+                self.activateWorkspace(self.filteredWorkspaces[slot])
+            }
+        }
         container.addSubview(searchField)
         
-        // ESC Badge on right
+        // ESC Badge on top right
         let escBadge = NSTextField(labelWithString: "esc")
-        escBadge.font = NSFont.monospacedSystemFont(ofSize: 10.5, weight: .medium)
-        escBadge.textColor = NSColor(calibratedWhite: 0.50, alpha: 1.0)
+        escBadge.font = NSFont.monospacedSystemFont(ofSize: 11.0, weight: .semibold)
+        escBadge.textColor = NSColor(calibratedWhite: 0.85, alpha: 1.0)
         escBadge.alignment = .center
-        escBadge.frame = NSRect(x: width - 48, y: height - 44, width: 30, height: 16)
+        escBadge.frame = NSRect(x: width - 52, y: height - 44, width: 34, height: 18)
         escBadge.wantsLayer = true
-        escBadge.layer?.cornerRadius = 4.0
+        escBadge.layer?.cornerRadius = 5.0
+        escBadge.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.08).cgColor
         escBadge.layer?.borderWidth = 1.0
-        escBadge.layer?.borderColor = NSColor(calibratedWhite: 0.30, alpha: 1.0).cgColor
+        escBadge.layer?.borderColor = NSColor.white.withAlphaComponent(0.20).cgColor
         container.addSubview(escBadge)
         
-        // Divider Line
-        let divider = NSBox(frame: NSRect(x: 0, y: height - 58, width: width, height: 1))
+        // Header Divider Line
+        let divider = NSBox(frame: NSRect(x: 0, y: height - 60, width: width, height: 1))
         divider.boxType = .separator
         container.addSubview(divider)
         
         // Workspaces Table View
-        scrollView = NSScrollView(frame: NSRect(x: 0, y: 32, width: width, height: height - 91))
+        scrollView = NSScrollView(frame: NSRect(x: 0, y: 34, width: width, height: height - 95))
         scrollView.drawsBackground = false
         scrollView.hasVerticalScroller = true
         scrollView.autohidesScrollers = true
@@ -352,7 +372,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
         tableView = NSTableView(frame: scrollView.bounds)
         tableView.backgroundColor = .clear
         tableView.headerView = nil
-        tableView.rowHeight = 46
+        tableView.rowHeight = 48
         tableView.intercellSpacing = .zero
         
         let col = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("WorkspaceCol"))
@@ -368,16 +388,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
         container.addSubview(scrollView)
         
         // Footer Bar
-        let footerDivider = NSBox(frame: NSRect(x: 0, y: 31, width: width, height: 1))
-        footerDivider.boxType = .separator
-        container.addSubview(footerDivider)
+        let footerBox = NSView(frame: NSRect(x: 0, y: 0, width: width, height: 34))
+        footerBox.wantsLayer = true
+        footerBox.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.28).cgColor
         
-        footerLabel = NSTextField(labelWithString: "⌥A Toggle Switcher   •   ↑↓ Navigate   •   ↵ Focus   •   ⌘1–⌘9 Quick Switch")
-        footerLabel.font = NSFont.systemFont(ofSize: 10.5, weight: .regular)
-        footerLabel.textColor = NSColor(calibratedWhite: 0.45, alpha: 1.0)
+        let footerDivider = NSBox(frame: NSRect(x: 0, y: 33, width: width, height: 1))
+        footerDivider.boxType = .separator
+        footerBox.addSubview(footerDivider)
+        
+        footerLabel = NSTextField(labelWithString: "⌥A Toggle   •   Tab / ↑↓ Navigate   •   ↵ Switch   •   ⌘1–⌘9 Quick Jump   •   esc Close")
+        footerLabel.font = NSFont.systemFont(ofSize: 11.0, weight: .medium)
+        footerLabel.textColor = NSColor(calibratedWhite: 0.65, alpha: 1.0)
         footerLabel.alignment = .center
-        footerLabel.frame = NSRect(x: 0, y: 8, width: width, height: 16)
-        container.addSubview(footerLabel)
+        footerLabel.frame = NSRect(x: 0, y: 8, width: width, height: 18)
+        footerBox.addSubview(footerLabel)
+        
+        container.addSubview(footerBox)
     }
     
     // MARK: - Global Hotkey Listener (Option + A)
@@ -561,9 +587,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
         AXUIElementPerformAction(item.windowRef, kAXRaiseAction as CFString)
     }
     
-    // MARK: - SearchFieldDelegate
-    func searchFieldTextDidChange(text: String) {
-        let query = text.trimmingCharacters(in: .whitespaces).lowercased()
+    // MARK: - Selection Navigation (Tab, Shift+Tab, Up, Down)
+    func navigateSelection(delta: Int) {
+        guard !filteredWorkspaces.isEmpty else { return }
+        selectedIndex = (selectedIndex + delta + filteredWorkspaces.count) % filteredWorkspaces.count
+        tableView.reloadData()
+        tableView.scrollRowToVisible(selectedIndex)
+    }
+    
+    func activateCurrentSelection() {
+        if selectedIndex >= 0 && selectedIndex < filteredWorkspaces.count {
+            activateWorkspace(filteredWorkspaces[selectedIndex])
+        }
+    }
+    
+    // MARK: - NSTextFieldDelegate / Command Interception
+    func controlTextDidChange(_ obj: Notification) {
+        let query = searchField.stringValue.trimmingCharacters(in: .whitespaces).lowercased()
         if query.isEmpty {
             filteredWorkspaces = allWorkspaces
         } else {
@@ -580,46 +620,36 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewD
         }
     }
     
-    func searchFieldDidPressKey(event: NSEvent) -> Bool {
+    func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        // Tab key: Cycle down
+        if commandSelector == #selector(NSResponder.insertTab(_:)) {
+            navigateSelection(delta: 1)
+            return true
+        }
+        // Shift + Tab key: Cycle up
+        if commandSelector == #selector(NSResponder.insertBacktab(_:)) {
+            navigateSelection(delta: -1)
+            return true
+        }
         // Down Arrow
-        if event.keyCode == 125 {
-            if !filteredWorkspaces.isEmpty {
-                selectedIndex = (selectedIndex + 1) % filteredWorkspaces.count
-                tableView.reloadData()
-                tableView.scrollRowToVisible(selectedIndex)
-            }
+        if commandSelector == #selector(NSResponder.moveDown(_:)) {
+            navigateSelection(delta: 1)
             return true
         }
         // Up Arrow
-        if event.keyCode == 126 {
-            if !filteredWorkspaces.isEmpty {
-                selectedIndex = (selectedIndex - 1 + filteredWorkspaces.count) % filteredWorkspaces.count
-                tableView.reloadData()
-                tableView.scrollRowToVisible(selectedIndex)
-            }
+        if commandSelector == #selector(NSResponder.moveUp(_:)) {
+            navigateSelection(delta: -1)
             return true
         }
         // Enter / Return
-        if event.keyCode == 36 {
-            if selectedIndex >= 0 && selectedIndex < filteredWorkspaces.count {
-                activateWorkspace(filteredWorkspaces[selectedIndex])
-            }
+        if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+            activateCurrentSelection()
             return true
         }
         // Escape
-        if event.keyCode == 53 {
+        if commandSelector == #selector(NSResponder.cancelOperation(_:)) {
             hudPanel.orderOut(nil)
             return true
-        }
-        // Command + 1..9
-        if event.modifierFlags.contains(.command) {
-            let numMap: [UInt16: Int] = [
-                18: 0, 19: 1, 20: 2, 21: 3, 23: 4, 22: 5, 26: 6, 28: 7, 25: 8
-            ]
-            if let slot = numMap[event.keyCode], slot < filteredWorkspaces.count {
-                activateWorkspace(filteredWorkspaces[slot])
-                return true
-            }
         }
         return false
     }
