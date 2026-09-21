@@ -9,7 +9,8 @@ all: build
 
 build:
 	@echo "==> Compiling native Swift binary..."
-	swiftc -O -o $(BINARY_NAME) main.swift
+	@mkdir -p .cache/swift
+	swiftc -O -module-cache-path ./.cache/swift -o $(BINARY_NAME) main.swift
 	@echo "==> Build complete: $(BINARY_NAME)"
 
 install: build

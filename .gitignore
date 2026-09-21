@@ -5,3 +5,4 @@ aspaces
 *.o
 build/
 bin/
+.cache/

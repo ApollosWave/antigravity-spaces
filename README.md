@@ -16,19 +16,20 @@ Antigravity Spaces lives quietly in your macOS menu bar. Designed for developers
 
 ## Overview
 
-Switching between open projects shouldn't interrupt your concentration. Antigravity Spaces automatically identifies every running Antigravity IDE workspace, formats project hierarchies into clean titles, and gives you instant keyboard access via **`⌘1` through `⌘9`**.
+Switching between open projects shouldn't interrupt your concentration. Antigravity Spaces automatically identifies every running Antigravity IDE workspace, formats project hierarchies into clean titles, and gives you a Spotlight-style **Floating Gaussian Blur HUD Switcher** summoned globally via **`⌥A` (Option + A)** or the menu bar.
 
-No windows hidden behind desktops. No hunting through Mission Control. Just your workspaces, organized and immediately available.
+Filter 20+ active workspaces in milliseconds by project name or active file, jump via **`⌘1` through `⌘9`**, or navigate with arrow keys. No windows hidden behind desktops. No hunting through Mission Control. Just your workspaces, organized and immediately available.
 
 ---
 
 ## Highlights
 
-- **Direct Window Navigation.** Bring any project workspace to the foreground instantly.
-- **Keyboard Shortcuts.** Switch workspaces fluidly with `⌘1` through `⌘9`.
-- **macOS Design Language.** Handcrafted vector iconography with Apple blue folder accents and an adaptive status bar glyph that responds to Light and Dark appearances.
-- **On-Demand Processing.** Discovers active windows only when summoned. Zero continuous background polling and zero idle CPU impact.
-- **Lightweight Architecture.** Written in native Swift using macOS Accessibility and CoreGraphics frameworks. Operates with an active memory footprint under 8 MB.
+- **Floating Frosted Glass HUD.** Raycast/Spotlight-style floating panel with hardware-accelerated macOS Gaussian blur and vibrancy.
+- **Global Shortcut (`⌥A`).** Summon the switcher instantly from any space, desktop, or full-screen application without lifting your hands from the keyboard.
+- **Real-Time Fuzzy Search.** Type project or file names to filter dozens of open repositories in milliseconds.
+- **Instant Keyboard Navigation.** Switch fluidly with `⌘1` through `⌘9`, or cycle with `↑`/`↓` and press `↵ Enter`.
+- **Hybrid Menu Bar.** Keep your menu bar glyph (`A↗`) for quick glances or click to toggle the HUD.
+- **Zero External Dependencies.** Built in 100% native Swift with AppKit and CoreGraphics. Operates with a memory footprint under 12 MB and 0% idle CPU.
 - **Private by Default.** Completely local execution. No telemetry, no network calls, and no analytics.
 
 ---
