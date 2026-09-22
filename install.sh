@@ -11,8 +11,10 @@ mkdir -p "$INSTALL_DIR"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-echo "==> Compiling native Swift binary..."
-swiftc -O -o "$INSTALL_DIR/antigravity-spaces" "$SCRIPT_DIR/main.swift"
+echo "==> Compiling native Swift binary (modular architecture)..."
+mkdir -p "$SCRIPT_DIR/.cache/swift"
+find "$SCRIPT_DIR/Sources/AntigravitySpaces" -name "*.swift" -print0 | xargs -0 swiftc -O -module-cache-path "$SCRIPT_DIR/.cache/swift" -o "$INSTALL_DIR/antigravity-spaces"
+ln -sf "$INSTALL_DIR/antigravity-spaces" "$INSTALL_DIR/aspaces"
 
 echo "==> Installed binary to $INSTALL_DIR/antigravity-spaces"
 

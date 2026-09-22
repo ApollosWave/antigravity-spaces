@@ -1,118 +1,107 @@
 # Antigravity Spaces
 
-### Workspaces, within reach.
+### All your workspaces. One keystroke away.
 
 [![macOS](https://img.shields.io/badge/macOS-12.0%2B-black?logo=apple&logoColor=white)](https://apple.com)
 [![Swift](https://img.shields.io/badge/Swift-5.9%2B-FA7343?logo=swift&logoColor=white)](https://swift.org)
 [![Dependencies](https://img.shields.io/badge/Dependencies-0%20external-black)](#)
-[![Memory](https://img.shields.io/badge/Memory-%3C8MB-gray)](#)
+[![Memory](https://img.shields.io/badge/Memory-%3C10MB-gray)](#)
 [![License](https://img.shields.io/badge/License-MIT-black)](LICENSE)
 
-Working across 15–20 active projects in Antigravity made switching windows a constant papercut. The built-in Command Palette (`Cmd + Shift + P` ➔ *Switch Window*) requires too much typing when you just want to jump somewhere instantly. Right-clicking the Antigravity Dock icon becomes a crowded, unreadable wall of text once you have that many workspaces open, and hunting through Mission Control with dozens of identical dark windows wastes focus.
+---
 
-**Antigravity Spaces** solves this with a lightweight, native macOS floating HUD switcher. Hit **`⌥A`** from anywhere, type two characters, press `Enter` or `⌘1`–`⌘9`, and you're already in your code.
+Working across multiple active projects in Antigravity shouldn't slow you down.
+
+**Antigravity Spaces** is a native, keyboard-first workspace switcher for macOS. Press **`⌥Space`** (or `⇧Space`), type a couple letters, and you're instantly in your code.
 
 ![Antigravity Spaces Showcase](assets/showcase.jpg)
 
 ---
 
-## Overview
+## Features
 
-Switching between open projects shouldn't interrupt your concentration. Antigravity Spaces automatically identifies every running Antigravity IDE workspace, formats project hierarchies into clean titles, and gives you a Spotlight-style **Floating Gaussian Blur HUD Switcher** summoned globally via **`⌥A` (Option + A)** or the menu bar.
-
-Filter 20+ active workspaces in milliseconds by project name or active file, jump via **`⌘1` through `⌘9`**, or navigate with arrow keys and Tab. No windows hidden behind desktops. No hunting through Mission Control. Just your workspaces, organized and immediately available.
-
----
-
-## Keyboard Shortcuts & Navigation
-
-| Key / Shortcut | Action |
-| :--- | :--- |
-| **`⌥A`** *(Option + A)* | **Global Summon**: Toggles the floating HUD switcher instantly from any desktop, space, or full-screen app |
-| **`↑` / `↓`** | Navigate up and down through workspaces |
-| **`Tab` / `⇧Tab`** | Cycle forward and backward through the workspace list |
-| **`↵ Enter`** | Switch immediately to the selected workspace and bring window to front |
-| **`⌘1` – `⌘9`** | Instant quick-jump directly to workspace slots 1 through 9 |
-| **Type anything** | Real-time live filtering by project name (e.g. `camp`, `solid`) or active open file (e.g. `chat_channel.rb`) |
-| **`Esc`** | Dismiss the HUD (or click anywhere outside) |
-| **Left Click `A↗`** | Toggle the floating HUD switcher from the macOS menu bar |
-| **Right Click `A↗`** | Open menu bar options: status, quick space list, and *Quit Spaces (`⌘Q`)* |
-
----
-
-## Highlights
-
-- **Floating Frosted Glass HUD.** Raycast/Spotlight-style floating panel with hardware-accelerated macOS Gaussian blur and vibrancy.
-- **Global Shortcut (`⌥A`).** Summon the switcher instantly from any space, desktop, or full-screen application without lifting your hands from the keyboard.
-- **Real-Time Fuzzy Search.** Type project or file names to filter dozens of open repositories in milliseconds.
-- **Instant Keyboard Navigation.** Switch fluidly with `⌘1` through `⌘9`, cycle with `Tab`/`⇧Tab` or `↑`/`↓`, and press `↵ Enter`.
-- **Hybrid Menu Bar.** Keep your menu bar glyph (`A↗`) for quick glances or click to toggle the HUD.
-- **Zero External Dependencies.** Built in 100% native Swift with AppKit and CoreGraphics. Operates with a memory footprint under 12 MB and 0% idle CPU.
-- **Private by Default.** Completely local execution. No telemetry, no network calls, and no analytics.
+- **Instant HUD.** Summon a frosted glass switcher from any app or full-screen space in milliseconds.
+- **Instant Search.** Filter dozens of open repositories and active files as fast as you can type.
+- **Quick Jump.** Press **`⌘1` through `⌘9`** to jump directly to any workspace slot.
+- **Customizable Shortcuts.** Use ergonomic presets like `⌥Space` or `⇧Space`, or record any custom shortcut from the menu bar.
+- **Multi-Display Aware.** Center the switcher on the display with your mouse cursor, or lock it to a preferred monitor.
+- **Launch at Login.** Enable automatic startup with a single click from the menu bar.
+- **Pure Native Swift.** Handcrafted in AppKit and CoreGraphics. Zero dependencies, <10 MB RAM footprint, and 0% idle CPU.
+- **Private by Design.** Operates completely offline. No network requests, no analytics, no telemetry.
 
 ---
 
 ## Installation
 
-### Automated Setup
+### Option 1: Download Release (Recommended)
 
-Clone the repository and run the setup script:
-
-```bash
-git clone https://github.com/ApollosWave/antigravity-spaces.git
-cd antigravity-spaces
-./install.sh
-```
-
-The installer compiles the native Swift binary, installs it to `~/.local/bin/antigravity-spaces` (with `aspaces` alias), and configures a lightweight macOS `launchd` service so the switcher is available whenever you log in.
-
-### Build from Source
-
-Build and launch the application directly using Make:
-
-```bash
-git clone https://github.com/ApollosWave/antigravity-spaces.git
-cd antigravity-spaces
-
-# Compile and start immediately
-make run
-
-# Or install and configure launch on login
-make autostart
-```
-
----
-
-## System Permissions
-
-Because Antigravity Spaces coordinates window focus across applications, macOS requires standard Accessibility access (if using iTerm or other terminals):
-
-1. When launched for the first time, macOS will display an Accessibility permission request.
-2. Select **Open System Settings** (or navigate to **System Settings > Privacy & Security > Accessibility**).
-3. Enable access for **antigravity-spaces**.
+1. Download **[Antigravity-Spaces.dmg](https://github.com/ApollosWave/antigravity-spaces/releases/latest/download/Antigravity-Spaces.dmg)** from the [Releases](https://github.com/ApollosWave/antigravity-spaces/releases) page.
+2. Drag **Antigravity Spaces.app** into your `/Applications` folder.
+3. Open **Antigravity Spaces** from Applications or Spotlight.
+4. Click the **`A↗`** menu bar icon and select **Launch at Login**.
 
 > [!NOTE]
-> The official macOS Terminal app does not require any system or Accessibility permissions.
+> On first launch, macOS will request **Accessibility** permissions so Antigravity Spaces can detect open IDE windows and focus them. Click **Open System Settings** and toggle the permission on.
 
 ---
 
-## Command Reference
+### Option 2: Build from Source
 
-| Target | Description |
+Requirements: macOS 12+, Xcode Command Line Tools (`swiftc`).
+
+```bash
+git clone https://github.com/ApollosWave/antigravity-spaces.git
+cd antigravity-spaces
+
+# Build native App Bundle and Release DMG
+make dmg
+
+# Or run directly in the background
+make run
+```
+
+---
+
+## Keyboard Reference
+
+| Keystroke | Action |
 | :--- | :--- |
-| `make build` | Compiles the standalone Swift binary with optimizations (`-O`) |
-| `make run` | Starts the application process in the background |
-| `make stop` | Gracefully terminates the running process |
-| `make autostart` | Installs to `~/.local/bin` and activates the login service |
-| `make uninstall` | Removes the binary and unloads the launch agent |
+| **`⌥Space`** *(or `⇧Space`)* | **Toggle Switcher**: Opens the HUD overlay from any screen or application |
+| **Type anything** | Live search projects (e.g. `camp`, `engine`) or active files (e.g. `main.go`) |
+| **`↑` / `↓`** | Navigate workspace selection up and down |
+| **`Tab` / `⇧Tab`** | Cycle forward and backward through workspaces |
+| **`↵ Enter`** | Switch immediately to selected workspace and focus its window |
+| **`⌘1` – `⌘9`** | Jump directly to workspace slot 1 through 9 |
+| **`Esc`** | Dismiss switcher (or click anywhere outside) |
 
 ---
 
-## Requirements
+## Shortcuts & Preferences
 
-- macOS Monterey (12.0) or later
-- Swift 5.9 or later (included with Xcode Command Line Tools)
-- Antigravity IDE
+Configure everything directly from the **`A↗`** menu bar icon:
+
+- **Shortcut Presets:** Switch between `⌥Space`, `⇧Space`, `⌥S`, `⌥W`, `⌥Tab`, `⌥\``, and more with one click.
+- **Record Custom Shortcut:** Click *Record Custom Shortcut...*, press your favorite key combo, and save.
+- **HUD Display:** Choose *Follow Mouse Cursor (Auto)* or pin to a specific display.
+- **Launch at Login:** Keep the switcher ready across system reboots.
+- **Quit Spaces (`⌘Q`):** Clean, graceful exit.
+
+---
+
+## Architecture
+
+Antigravity Spaces is engineered with a modular, SOLID Swift architecture:
+
+```
+Sources/AntigravitySpaces/
+├── App/          # Application delegate & lifecycle coordinator
+├── Menu/         # Status bar item, vector icons & dynamic dropdown menu
+├── Models/       # KeyCode mappings, shortcut configurations, and workspace items
+├── Services/     # Window discovery (Accessibility), hotkey monitoring, preferences
+├── Views/        # Gaussian blur HUD, search field, custom table cells & rows
+├── Windows/      # Floating HUD panel, shortcut recorder panel & controllers
+└── main.swift    # Command-line flags & AppKit entry point
+```
 
 ---
 

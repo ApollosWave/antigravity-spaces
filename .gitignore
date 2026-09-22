@@ -1,8 +1,14 @@
 .DS_Store
 antigravity-spaces
 aspaces
+*.app
+*.dmg
 *.swp
 *.o
 build/
 bin/
+.build/
 .cache/
+.build_dmg/
+main.swift.backup
+
