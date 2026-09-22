@@ -33,7 +33,20 @@ Working across multiple active projects in Antigravity shouldn't slow you down.
 
 ## Installation
 
-### Option 1: Download Release (Recommended)
+### Option 1: Install with Homebrew (Recommended)
+
+```bash
+brew install apolloswave/tap/antigravity-spaces
+```
+
+To update in the future:
+```bash
+brew upgrade antigravity-spaces
+```
+
+---
+
+### Option 2: Download Release DMG
 
 1. Download **[Antigravity-Spaces.dmg](https://github.com/ApollosWave/antigravity-spaces/releases/latest/download/Antigravity-Spaces.dmg)** from the [Releases](https://github.com/ApollosWave/antigravity-spaces/releases) page.
 2. Drag **Antigravity Spaces.app** into your `/Applications` folder.
@@ -45,7 +58,7 @@ Working across multiple active projects in Antigravity shouldn't slow you down.
 
 ---
 
-### Option 2: Build from Source
+### Option 3: Build from Source
 
 Requirements: macOS 12+, Xcode Command Line Tools (`swiftc`).
 
